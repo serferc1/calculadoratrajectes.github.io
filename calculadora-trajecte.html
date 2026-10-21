@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost de Trajecte</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#0f0e0c;--surf:#1a1916;--surf2:#242320;
+  --accent:#e8c547;--acc2:#f0a500;
+  --text:#f0ede6;--muted:#7a7768;--border:#2e2c28;
+  --green:#5ecf7a;--red:#e05a5a;--blue:#5ab4e8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:1.5rem 1rem 5rem}
+.page{max-width:640px;margin:0 auto}
+
+#loadScreen{position:fixed;inset:0;background:var(--bg);z-index:50000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .3s}
+#loadScreen.hidden{opacity:0;pointer-events:none}
+.load-logo{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800}
+.load-logo span{color:var(--accent)}
+.load-bar{width:140px;height:3px;background:var(--surf2);border-radius:2px;overflow:hidden}
+.load-fill{height:100%;background:var(--accent);animation:fill 1s ease forwards}
+@keyframes fill{from{width:0}to{width:100%}}
+.load-txt{font-size:.65rem;color:var(--muted)}
+
+header{margin-bottom:1.5rem;padding-bottom:1.2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.hl .tag{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.25rem}
+h1{font-family:'Syne',sans-serif;font-size:clamp(1.5rem,5vw,2.3rem);font-weight:800;line-height:1.05}
+h1 span{color:var(--accent)}
+.subtitle{margin-top:.25rem;font-size:.7rem;color:var(--muted)}
+.btn-admin{background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .58rem;cursor:pointer;transition:all .2s;opacity:.4;flex-shrink:0;margin-top:.3rem}
+.btn-admin:hover{opacity:1;border-color:var(--accent);color:var(--accent)}
+
+section{background:var(--surf);border:1px solid var(--border);border-radius:4px;padding:1.1rem 1.25rem;margin-bottom:.75rem}
+.sec-title{font-family:'Syne',sans-serif;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+label{font-size:.63rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:.22rem}
+input[type=text],input[type=password]{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;padding:.52rem .7rem;outline:none;transition:border-color .15s}
+input[type=text]:focus,input[type=password]:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted);opacity:.4}
+.iw{position:relative;display:flex;align-items:center}
+input[type=number]{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Mono',monospace;font-size:.88rem;padding:.52rem 2.4rem .52rem .65rem;outline:none;transition:border-color .15s;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type=number]:focus{border-color:var(--accent)}
+.unit{position:absolute;right:.5rem;font-size:.64rem;color:var(--muted);pointer-events:none}
+.hint{font-size:.58rem;color:var(--muted);opacity:.6;margin-top:.2rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem}
+@media(max-width:480px){.g3{grid-template-columns:1fr 1fr}}
+
+/* RUTA INPUTS */
+.ruta-wrap{display:flex;gap:.5rem;align-items:center}
+.ruta-icons{display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:.15rem}
+.ruta-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent)}
+.ruta-dot.dest{border-color:var(--green);background:var(--green)}
+.ruta-dotline{width:2px;height:24px;background:linear-gradient(var(--accent),var(--green));opacity:.35;margin:3px auto}
+.ruta-inputs{flex:1;display:flex;flex-direction:column;gap:.42rem}
+.ruta-field{display:flex;gap:.35rem;align-items:center}
+.ruta-field input{flex:1}
+.btn-clear{background:none;border:none;color:var(--muted);font-size:.72rem;padding:.15rem .28rem;cursor:pointer;line-height:1;transition:color .15s;flex-shrink:0}
+.btn-clear:hover{color:var(--red)}
+.btn-swap{background:var(--surf2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;color:var(--muted);transition:all .15s;flex-shrink:0;margin-left:.1rem}
+.btn-swap:hover{border-color:var(--accent);color:var(--accent)}
+
+.btn-route{width:100%;margin-top:.82rem;background:var(--accent);border:none;border-radius:3px;color:#000;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;padding:.7rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.4rem;letter-spacing:.03em}
+.btn-route:hover{background:var(--acc2)}
+.btn-route:disabled{opacity:.38;cursor:not-allowed;background:var(--surf2);color:var(--muted)}
+
+/* PROGRESS */
+.progress{display:none;margin-top:.65rem;padding:.5rem .8rem;background:var(--surf2);border-radius:3px;border:1px solid var(--border);gap:.5rem;flex-direction:column}
+.progress.show{display:flex}
+.prog-step{font-size:.65rem;color:var(--muted);display:flex;align-items:center;gap:.45rem;transition:color .25s}
+.prog-step.active{color:var(--accent)}
+.prog-step.done{color:var(--green)}
+.prog-icon{width:10px;height:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.prog-step.active .prog-icon::after{content:'';display:block;width:8px;height:8px;border:1.5px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+.prog-step.done .prog-icon::after{content:'✓';font-size:.65rem;color:var(--green);line-height:1}
+.prog-step:not(.active):not(.done) .prog-icon::after{content:'○';font-size:.55rem;color:var(--muted);line-height:1}
+
+.stmsg{font-size:.7rem;padding:.4rem .68rem;border-radius:3px;margin-top:.5rem;display:none}
+.stmsg.err{background:rgba(224,90,90,.1);border:1px solid var(--red);color:var(--red);display:block}
+.stmsg.ok{background:rgba(94,207,122,.09);border:1px solid var(--green);color:var(--green);display:block}
+
+#map{width:100%;height:255px;border-radius:3px;border:1px solid var(--border);margin-top:.82rem;background:#111}
+
+.route-bar{display:none;margin-top:.62rem;background:var(--surf2);border-radius:3px;border:1px solid var(--border);overflow:hidden}
+.route-bar.show{display:flex}
+.rb-item{flex:1;padding:.58rem .8rem;display:flex;flex-direction:column;gap:.06rem;border-right:1px solid var(--border)}
+.rb-item:last-child{border-right:none}
+.rb-lbl{font-size:.54rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.rb-val{font-size:.92rem;color:var(--accent);font-family:'Syne',sans-serif;font-weight:700}
+.rb-val.pending{color:var(--muted);font-size:.75rem;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+.share-row{display:none;gap:.45rem;margin-top:.62rem;flex-wrap:wrap}
+.btn-share{flex:1;min-width:110px;background:var(--surf2);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-family:'DM Mono',monospace;font-size:.68rem;padding:.45rem .65rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.3rem}
+.btn-share:hover{border-color:var(--blue);color:var(--blue)}
+.btn-share.copied{border-color:var(--green);color:var(--green)}
+
+.tog{display:flex;gap:.35rem;flex-wrap:wrap}
+.tbtn{background:var(--surf2);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-family:'DM Mono',monospace;font-size:.76rem;padding:.4rem .75rem;cursor:pointer;transition:all .12s}
+.tbtn.on{background:var(--accent);border-color:var(--accent);color:#000;font-weight:500}
+
+.recent-list{display:flex;flex-direction:column;gap:.32rem}
+.recent-item{background:var(--surf2);border:1px solid var(--border);border-radius:3px;padding:.48rem .72rem;display:flex;align-items:center;gap:.45rem;cursor:pointer;transition:border-color .15s}
+.recent-item:hover{border-color:var(--accent)}
+.ri-route{flex:1;min-width:0}
+.ri-names{font-size:.74rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri-meta{font-size:.58rem;color:var(--muted);margin-top:.06rem}
+.ri-arr{color:var(--muted);font-size:.68rem;flex-shrink:0}
+.ri-del{background:none;border:none;color:var(--muted);font-size:.68rem;cursor:pointer;padding:.08rem .28rem;flex-shrink:0;transition:color .15s}
+.ri-del:hover{color:var(--red)}
+
+.btn-calc{width:100%;background:var(--accent);border:none;border-radius:3px;color:#000;font-family:'Syne',sans-serif;font-size:.98rem;font-weight:700;letter-spacing:.04em;padding:.82rem;cursor:pointer;transition:background .15s,transform .1s;text-transform:uppercase;margin-bottom:.75rem}
+.btn-calc:hover{background:var(--acc2)}
+.btn-calc:active{transform:scale(.99)}
+
+#results{background:var(--surf);border:2px solid var(--accent);border-radius:4px;padding:1.2rem 1.25rem;margin-bottom:.75rem;display:none}
+.res-big{background:var(--surf2);border-radius:3px;padding:.78rem 1rem;margin:.28rem 0 .78rem;display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.bi{display:flex;flex-direction:column;gap:.1rem}
+.bi-lbl{font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bi-num{font-family:'Syne',sans-serif;font-size:1.45rem;font-weight:800;color:var(--accent)}
+.bi-num.g{color:var(--green)}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;padding:.38rem 0;border-bottom:1px solid var(--border);font-size:.77rem}
+.rrow:last-child{border-bottom:none}
+.rlbl{color:var(--muted)}.rval{color:var(--text)}
+.rval.a{color:var(--accent);font-size:.9rem}.rval.g{color:var(--green)}
+
+.ref-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+@media(max-width:460px){.ref-grid{grid-template-columns:1fr}}
+.ref-card{background:var(--surf2);border:1px solid var(--border);border-radius:3px;padding:.65rem .85rem}
+.ref-title{font-size:.58rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.27rem}
+.ref-body{font-size:.7rem;color:var(--muted);line-height:1.65}
+.ref-body strong{color:var(--text)}
+
+footer{text-align:center;margin-top:1.5rem;padding-top:.72rem;border-top:1px solid var(--border);font-size:.56rem;color:var(--muted);opacity:.36}
+
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:var(--surf);border:1px solid var(--border);border-radius:5px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.mhdr{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+.mtitle{font-family:'Syne',sans-serif;font-size:.94rem;font-weight:700}
+.mclose{background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:.68rem;padding:.25rem .48rem;cursor:pointer;transition:all .15s}
+.mclose:hover{border-color:var(--red);color:var(--red)}
+.mbody{padding:1.1rem 1.25rem}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.1rem}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:.45rem .8rem;cursor:pointer;transition:all .15s;margin-bottom:-1px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.pane{display:none}.pane.on{display:block}
+.vlist{display:flex;flex-direction:column;gap:.38rem;margin-bottom:.82rem}
+.vcard{background:var(--surf2);border:1px solid var(--border);border-radius:3px;padding:.58rem .85rem;display:flex;align-items:center;gap:.5rem}
+.vcard.act{border-color:var(--accent)}
+.vdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--border)}
+.vcard.act .vdot{background:var(--accent)}
+.vinfo{flex:1;min-width:0}
+.vname{font-size:.77rem;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vstats{font-size:.6rem;color:var(--muted);margin-top:.08rem}
+.vacts{display:flex;gap:.27rem;flex-shrink:0}
+.vbtn{background:none;border:1px solid var(--border);border-radius:3px;font-family:'DM Mono',monospace;font-size:.59rem;padding:.22rem .44rem;cursor:pointer;transition:all .12s;color:var(--muted)}
+.vbtn.sel{color:var(--accent);border-color:var(--accent)}.vbtn.sel:hover{background:var(--accent);color:#000}
+.vbtn.edt:hover{color:var(--blue);border-color:var(--blue)}
+.vbtn.del:hover{color:var(--red);border-color:var(--red)}
+.fg{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.65rem}
+.flbl{font-size:.61rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.fhint{font-size:.59rem;color:var(--muted);opacity:.6;margin-top:.12rem}
+.fbk{font-size:.65rem;padding:.35rem .55rem;border-radius:3px;margin-top:.35rem;display:none}
+.fbk.ok{background:rgba(94,207,122,.1);border:1px solid var(--green);color:var(--green);display:block}
+.fbk.err{background:rgba(224,90,90,.1);border:1px solid var(--red);color:var(--red);display:block}
+.divider{height:1px;background:var(--border);margin:.85rem 0}
+.form-title{font-size:.64rem;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.65rem}
+.bpri{background:var(--accent);border:none;border-radius:3px;color:#000;font-family:'DM Mono',monospace;font-size:.73rem;font-weight:500;padding:.48rem .82rem;cursor:pointer;transition:background .15s}
+.bpri:hover{background:var(--acc2)}
+.bsec{background:var(--surf2);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-family:'DM Mono',monospace;font-size:.73rem;padding:.48rem .82rem;cursor:pointer;transition:all .15s}
+.bsec:hover{border-color:var(--muted);color:var(--text)}
+.bdng{background:rgba(224,90,90,.1);border:1px solid var(--red);border-radius:3px;color:var(--red);font-family:'DM Mono',monospace;font-size:.73rem;padding:.48rem .82rem;cursor:pointer;transition:all .15s}
+.bdng:hover{background:var(--red);color:#fff}
+.btn-row{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.45rem}
+
+.leaflet-tile{filter:brightness(.55) saturate(.38) hue-rotate(188deg)}
+.leaflet-control-zoom a{background:var(--surf2)!important;color:var(--accent)!important;border-color:var(--border)!important}
+.leaflet-control-attribution{background:rgba(8,8,6,.8)!important;color:var(--muted)!important;font-size:.48rem!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-popup-content-wrapper{background:var(--surf2)!important;color:var(--text)!important;border:1px solid var(--border)!important;box-shadow:none!important;font-family:'DM Mono',monospace!important;font-size:.74rem!important}
+.leaflet-popup-tip{background:var(--surf2)!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="loadScreen">
+  <div class="load-logo">Cost de <span>Trajecte</span></div>
+  <div class="load-bar"><div class="load-fill"></div></div>
+  <div class="load-txt">Carregant…</div>
+</div>
+
+<div class="page" id="app" style="display:none">
+
+<header>
+  <div class="hl">
+    <span class="tag">🚗 Calculadora</span>
+    <h1>Cost de <span>Trajecte</span></h1>
+    <p class="subtitle">Distàncies reals per carretera · Comparteix amb amics</p>
+  </div>
+  <button class="btn-admin" onclick="openAdmin()">⚙</button>
+</header>
+
+<!-- ① RUTA -->
+<section>
+  <div class="sec-title">① Ruta</div>
+
+  <div class="ruta-wrap">
+    <div class="ruta-icons">
+      <div class="ruta-dot"></div>
+      <div class="ruta-dotline"></div>
+      <div class="ruta-dot dest"></div>
+    </div>
+    <div class="ruta-inputs">
+      <div class="ruta-field">
+        <input type="text" id="inOrig" placeholder="Origen: ciutat, adreça…" autocomplete="off">
+        <button class="btn-clear" onclick="clearInput('inOrig')">✕</button>
+      </div>
+      <div class="ruta-field">
+        <input type="text" id="inDest" placeholder="Destí: ciutat, adreça…" autocomplete="off">
+        <button class="btn-clear" onclick="clearInput('inDest')">✕</button>
+      </div>
+    </div>
+    <button class="btn-swap" onclick="swapInputs()" title="Intercanviar">⇅</button>
+  </div>
+
+  <button class="btn-route" id="btnRoute" onclick="calcRoute()">→ Calcular ruta</button>
+
+  <div class="progress" id="progress">
+    <div class="prog-step" id="ps0"><div class="prog-icon"></div>Localitzant adreces al mapa</div>
+    <div class="prog-step" id="ps1"><div class="prog-icon"></div>Calculant distància per carretera</div>
+    <div class="prog-step" id="ps2"><div class="prog-icon"></div>Ruta preparada</div>
+  </div>
+
+  <div class="stmsg" id="stMsg"></div>
+  <div id="map"></div>
+
+  <div class="route-bar" id="routeBar">
+    <div class="rb-item"><span class="rb-lbl">Per carretera</span><span class="rb-val" id="rKm">—</span></div>
+    <div class="rb-item"><span class="rb-lbl">Durada</span><span class="rb-val" id="rTime">—</span></div>
+    <div class="rb-item"><span class="rb-lbl">Anada i tornada</span><span class="rb-val" id="rKmRT">—</span></div>
+  </div>
+
+  <div class="share-row" id="shareRow">
+    <button class="btn-share" id="btnCopy" onclick="copyLink()">🔗 Copiar enllaç</button>
+    <button class="btn-share" onclick="shareWhatsApp()">💬 WhatsApp</button>
+  </div>
+</section>
+
+<!-- ANADA/TORNADA -->
+<section id="rtSec" style="display:none;padding:.65rem 1.25rem">
+  <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+    <span style="font-size:.71rem;color:var(--text)">Calcular per a:</span>
+    <div class="tog">
+      <button class="tbtn on" onclick="setRT(false,this)">Només anada</button>
+      <button class="tbtn" onclick="setRT(true,this)">Anada i tornada</button>
+    </div>
+  </div>
+</section>
+
+<!-- RECENTS -->
+<section id="recentSec" style="display:none">
+  <div class="sec-title">🕐 Trajectes recents</div>
+  <div class="recent-list" id="recentList"></div>
+</section>
+
+<!-- ② DETALLS -->
+<section>
+  <div class="sec-title">② Detalls</div>
+  <div class="g3">
+    <div>
+      <label>Distància (km)</label>
+      <div class="iw"><input type="number" id="km" min="1" step="0.1" placeholder="Auto"><span class="unit">km</span></div>
+      <span class="hint">S'omple automàticament</span>
+    </div>
+    <div>
+      <label>Preu combustible</label>
+      <div class="iw"><input type="number" id="preu" value="1.65" min="0.5" step="0.01"><span class="unit">€/L</span></div>
+    </div>
+    <div>
+      <label>Peatges / Extras</label>
+      <div class="iw"><input type="number" id="peatges" value="0" min="0" step="0.5"><span class="unit">€</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ PASSATGERS -->
+<section>
+  <div class="sec-title">③ Passatgers</div>
+  <label style="margin-bottom:.45rem">Nombre de persones (conductor inclòs)</label>
+  <div class="tog" id="paxBtns">
+    <button class="tbtn" onclick="selPax(1,this)">1</button>
+    <button class="tbtn on" onclick="selPax(2,this)">2</button>
+    <button class="tbtn" onclick="selPax(3,this)">3</button>
+    <button class="tbtn" onclick="selPax(4,this)">4</button>
+    <button class="tbtn" onclick="selPax(5,this)">5</button>
+  </div>
+</section>
+
+<button class="btn-calc" onclick="calcular()">→ Calcular cost</button>
+
+<div id="results">
+  <div class="sec-title">Resultat</div>
+  <div class="res-big" id="bigNums"></div>
+  <div id="desgl"></div>
+</div>
+
+<!-- REFERÈNCIA RÀPIDA -->
+<section>
+  <div class="sec-title">📋 Referència Ràpida</div>
+  <div class="ref-grid">
+    <div class="ref-card">
+      <div class="ref-title">Consum típic</div>
+      <div class="ref-body">
+        <strong>Gasolina:</strong> 6–9 L/100 km<br>
+        <strong>Dièsel:</strong> 5–7 L/100 km<br>
+        <strong>Híbrid:</strong> 4–6 L/100 km<br>
+        <strong>Elèctric:</strong> ~15–22 kWh/100
+      </div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">Despesa per km</div>
+      <div class="ref-body">
+        <strong>Utilitari:</strong> ~0.04 €/km<br>
+        <strong>Familiar:</strong> ~0.06 €/km<br>
+        <strong>SUV:</strong> ~0.08 €/km<br>
+        <strong>Furgoneta:</strong> ~0.10 €/km
+      </div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">Fórmula</div>
+      <div class="ref-body">
+        <strong>Comb.</strong> = km × L/100 ÷ 100 × €/L<br>
+        <strong>Desgast</strong> = km × €/km<br>
+        <strong>Per persona</strong> = Total ÷ pax
+      </div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">Vehicle actiu</div>
+      <div class="ref-body">
+        <strong id="refNom">—</strong><br>
+        <span id="refCons">—</span> L/100 km<br>
+        <span style="font-size:.62rem;opacity:.6">Canvia-ho a ⚙</span>
+      </div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">Com usar</div>
+      <div class="ref-body">
+        1· Escriu origen i destí<br>
+        2· Prem <strong>→ Calcular ruta</strong><br>
+        3· Tria anada o anada/tornada<br>
+        4· Ajusta passatgers i preu<br>
+        5· Prem <strong>→ Calcular cost</strong>
+      </div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">Compartir</div>
+      <div class="ref-body">
+        Calcula la ruta i prem <strong>🔗 Copiar enllaç</strong>. El receptor veurà el trajecte precarregat.<br><br>
+        <strong>💬 WhatsApp</strong> envia el link directament.
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>© OpenStreetMap · Nominatim · OSRM · Distàncies reals per carretera · Calculadora orientativa</footer>
+</div>
+
+<!-- MODAL PASSWORD -->
+<div class="overlay" id="ovPass">
+<div class="modal" style="max-width:330px">
+  <div class="mhdr"><span class="mtitle" id="passTitle">Accés Admin</span><button class="mclose" onclick="closeOv('ovPass')">✕</button></div>
+  <div class="mbody">
+    <div id="blkSetup" style="display:none">
+      <p style="font-size:.73rem;color:var(--muted);margin-bottom:.9rem;line-height:1.6">Crea una contrasenya d'administrador. <strong style="color:var(--text)">Guarda-la bé, no és recuperable.</strong></p>
+      <div class="fg"><label class="flbl">Nova contrasenya</label><input type="password" id="pS1" placeholder="Mínim 4 caràcters" autocomplete="new-password"></div>
+      <div class="fg"><label class="flbl">Confirma</label><input type="password" id="pS2" autocomplete="new-password"></div>
+      <div class="fbk" id="fbSetup"></div>
+      <button class="bpri" style="width:100%;margin-top:.4rem" onclick="doSetup()">Crear contrasenya</button>
+    </div>
+    <div id="blkLogin" style="display:none">
+      <div class="fg"><label class="flbl">Contrasenya</label><input type="password" id="pL" autocomplete="current-password"></div>
+      <div class="fbk" id="fbLogin"></div>
+      <button class="bpri" style="width:100%;margin-top:.4rem" onclick="doLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL ADMIN -->
+<div class="overlay" id="ovAdmin">
+<div class="modal">
+  <div class="mhdr"><span class="mtitle">⚙ Administrador</span><button class="mclose" onclick="closeOv('ovAdmin')">✕</button></div>
+  <div class="mbody">
+    <div class="tabs">
+      <button class="tab on" onclick="showTab('pVeh',this)">Vehicles</button>
+      <button class="tab" onclick="showTab('pCfg',this)">Configuració</button>
+      <button class="tab" onclick="showTab('pPas',this)">Contrasenya</button>
+    </div>
+    <div class="pane on" id="pVeh">
+      <div class="vlist" id="vlist"></div>
+      <div class="divider"></div>
+      <p class="form-title" id="vFormTit">+ Nou vehicle</p>
+      <div class="fg"><label class="flbl">Nom</label><input type="text" id="vNom" placeholder="Ex: Seat Ateca (SUV)"></div>
+      <div class="frow">
+        <div class="fg"><label class="flbl">Consum (L/100)</label><input type="number" id="vCons" min="1" step="0.1" placeholder="8.5"></div>
+        <div class="fg"><label class="flbl">Desgast (€/km)</label><input type="number" id="vDesg" min="0.01" step="0.005" placeholder="0.08"><span class="fhint">Pneumàtics, oli, frens…</span></div>
+      </div>
+      <div class="fbk" id="fbVeh"></div>
+      <div class="btn-row"><button class="bpri" onclick="saveVeh()">Guardar</button><button class="bsec" id="bCancelVeh" onclick="cancelEditVeh()" style="display:none">Cancel·lar</button></div>
+    </div>
+    <div class="pane" id="pCfg">
+      <div class="fg"><label class="flbl">Preu combustible per defecte (€/L)</label><input type="number" id="cfgPreu" min="0.5" step="0.01"></div>
+      <div class="fbk" id="fbCfg"></div>
+      <button class="bpri" onclick="saveCfgUI()" style="margin-top:.4rem">Guardar</button>
+    </div>
+    <div class="pane" id="pPas">
+      <div class="fg"><label class="flbl">Contrasenya actual</label><input type="password" id="pOld" autocomplete="current-password"></div>
+      <div class="fg"><label class="flbl">Nova contrasenya</label><input type="password" id="pN1" placeholder="Mín. 4 caràcters" autocomplete="new-password"></div>
+      <div class="fg"><label class="flbl">Confirma</label><input type="password" id="pN2" autocomplete="new-password"></div>
+      <div class="fbk" id="fbPas"></div>
+      <div class="btn-row"><button class="bpri" onclick="changePass()">Canviar</button><button class="bdng" onclick="resetAll()">Restablir tot</button></div>
+      <p style="font-size:.58rem;color:var(--muted);margin-top:.5rem;opacity:.5">"Restablir tot" elimina contrasenya i vehicles personalitzats.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ══ STORAGE ══════════════════════════════════════════
+const SK='traj_v5',SK_REC='traj_rec_v5';
+async function stGet(k){try{const s=localStorage.getItem(k);if(s)return JSON.parse(s);}catch(e){}return null;}
+async function stSet(k,o){try{localStorage.setItem(k,JSON.stringify(o));}catch(e){}}
+
+// ══ CONFIG ════════════════════════════════════════════
+const DEF={vehicles:[
+  {id:'v1',name:'Seat Ateca (SUV)',       consum:8.5,desgast:0.08,active:true},
+  {id:'v2',name:'Familiar (Golf, León…)', consum:7.0,desgast:0.06,active:false},
+  {id:'v3',name:'Utilitari (Clio, Polo…)',consum:6.5,desgast:0.04,active:false},
+  {id:'v4',name:'SUV Gran / Furgoneta',   consum:9.5,desgast:0.10,active:false}
+],preuDef:1.65,passHash:null};
+let cfg=JSON.parse(JSON.stringify(DEF)),recents=[];
+const activeVeh=()=>cfg.vehicles.find(v=>v.active)||cfg.vehicles[0];
+
+async function init(){
+  const sv=await stGet(SK);if(sv)cfg=sv;
+  const rc=await stGet(SK_REC);if(rc)recents=rc;
+  document.getElementById('preu').value=cfg.preuDef;
+  updateRef();renderRecents();
+  const hash=decodeURIComponent(location.hash.slice(1));
+  if(hash.includes('|')){const[o,d]=hash.split('|');if(o)document.getElementById('inOrig').value=o;if(d)document.getElementById('inDest').value=d;if(o&&d)setTimeout(()=>calcRoute(),300);}
+  document.getElementById('loadScreen').classList.add('hidden');
+  document.getElementById('app').style.display='block';
+  setTimeout(()=>map.invalidateSize(),150);
+}
+function updateRef(){const v=activeVeh();document.getElementById('refNom').textContent=v.name;document.getElementById('refCons').textContent=v.consum.toFixed(1);}
+
+// ══ CRYPTO ═══════════════════════════════════════════
+async function sha256(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+
+// ══ MAP ══════════════════════════════════════════════
+const map=L.map('map').setView([40.4,-3.7],6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+function mkIcon(color,txt){return L.divIcon({className:'',html:`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:13px;height:13px;background:${color};border-radius:50%;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div><div style="background:${color};color:#000;font-family:'DM Mono',monospace;font-size:8px;font-weight:600;padding:1px 5px;border-radius:2px;margin-top:2px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis">${txt}</div></div>`,iconSize:[90,34],iconAnchor:[6,13]});}
+let mOrig=null,mDest=null,mLine=null;
+function clearLayers(){[mOrig,mDest,mLine].forEach(l=>{if(l)map.removeLayer(l);});mOrig=mDest=mLine=null;}
+
+// ══ PROGRESS ═════════════════════════════════════════
+function setStep(n){['ps0','ps1','ps2'].forEach((id,i)=>{document.getElementById(id).className='prog-step'+(i<n?' done':i===n?' active':'');});}
+function showProg(){document.getElementById('progress').classList.add('show');setStep(0);}
+function hideProg(){document.getElementById('progress').classList.remove('show');}
+
+// ══ API: NOMINATIM + OSRM (sense clau, gratuïts) ══════
+// Geocodifica un text → {lat, lon, nom}
+async function nominatim(query){
+  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`;
+  const r=await fetch(url,{headers:{'Accept-Language':'ca,es,en','User-Agent':'CostTrajecte/1.0'}});
+  const d=await r.json();
+  if(!d.length)throw new Error(`No s'ha trobat: ${query}`);
+  const parts=d[0].display_name.split(',');
+  return {lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),nom:parts.slice(0,2).join(',').trim()};
+}
+
+// Calcula ruta en cotxe per carretera via OSRM → {distKm, durMin, geom}
+async function osrm(oLon,oLat,dLon,dLat){
+  const url=`https://router.project-osrm.org/route/v1/driving/${oLon},${oLat};${dLon},${dLat}?overview=full&geometries=geojson`;
+  const r=await fetch(url);
+  const d=await r.json();
+  if(d.code!=='Ok'||!d.routes?.length)throw new Error('OSRM sense ruta');
+  const rt=d.routes[0];
+  return {distKm:rt.distance/1000,durMin:Math.round(rt.duration/60),geom:rt.geometry};
+}
+
+// ══ CALCUL DE RUTA ═══════════════════════════════════
+let routeBase=null,isRT=false,pax=2,curOrig='',curDest='';
+
+async function calcRoute(){
+  const orig=document.getElementById('inOrig').value.trim();
+  const dest=document.getElementById('inDest').value.trim();
+  if(!orig||!dest){setSt('err','Introdueix origen i destí.');return;}
+
+  document.getElementById('btnRoute').disabled=true;
+  document.getElementById('stMsg').className='stmsg';
+  document.getElementById('routeBar').className='route-bar';
+  document.getElementById('rtSec').style.display='none';
+  document.getElementById('shareRow').style.display='none';
+  document.getElementById('results').style.display='none';
+  clearLayers();
+  showProg(); setStep(0);
+
+  try{
+    // FASE 1: geocodificar les dues adreces (Nominatim)
+    const[gO,gD]=await Promise.all([nominatim(orig),nominatim(dest)]);
+    mOrig=L.marker([gO.lat,gO.lon],{icon:mkIcon('#e8c547',gO.nom)}).addTo(map);
+    mDest=L.marker([gD.lat,gD.lon],{icon:mkIcon('#5ecf7a',gD.nom)}).addTo(map);
+    map.fitBounds([[gO.lat,gO.lon],[gD.lat,gD.lon]],{padding:[45,45]});
+    setStep(1);
+
+    // FASE 2: ruta real per carretera (OSRM)
+    const rt=await osrm(gO.lon,gO.lat,gD.lon,gD.lat);
+    routeBase=rt.distKm;
+    curOrig=orig; curDest=dest;
+
+    // Dibuixar ruta real al mapa
+    mLine=L.geoJSON(rt.geom,{style:{color:'#e8c547',weight:4,opacity:.85}}).addTo(map);
+
+    // Actualitzar UI
+    document.getElementById('rKm').className='rb-val';
+    document.getElementById('rKm').textContent=routeBase.toFixed(1)+' km';
+    document.getElementById('rTime').className='rb-val';
+    document.getElementById('rTime').textContent=fmtDur(rt.durMin);
+    document.getElementById('rKmRT').className='rb-val';
+    document.getElementById('rKmRT').textContent=(routeBase*2).toFixed(1)+' km';
+    document.getElementById('routeBar').className='route-bar show';
+    document.getElementById('rtSec').style.display='block';
+    document.getElementById('shareRow').style.display='flex';
+    document.getElementById('km').value=(isRT?routeBase*2:routeBase).toFixed(1);
+
+    location.hash=encodeURIComponent(orig)+'|'+encodeURIComponent(dest);
+    saveRecent(orig,dest,routeBase,rt.durMin);
+
+    setStep(2); hideProg();
+    setSt('ok',`✓ ${routeBase.toFixed(1)} km per carretera · ${fmtDur(rt.durMin)}`);
+
+  }catch(e){
+    hideProg();
+    setSt('err',e.message||'No s\'ha pogut calcular la ruta. Verifica les adreces.');
+    console.error(e);
+  }
+  document.getElementById('btnRoute').disabled=false;
+}
+
+// ══ COMPARTIR ════════════════════════════════════════
+function getURL(){return location.href.split('#')[0]+'#'+encodeURIComponent(curOrig)+'|'+encodeURIComponent(curDest);}
+async function copyLink(){
+  const url=getURL();
+  try{await navigator.clipboard.writeText(url);}catch(_){prompt('Copia aquest enllaç:',url);return;}
+  const b=document.getElementById('btnCopy');b.textContent='✓ Copiat!';b.classList.add('copied');
+  setTimeout(()=>{b.textContent='🔗 Copiar enllaç';b.classList.remove('copied');},2500);
+}
+function shareWhatsApp(){window.open('https://wa.me/?text='+encodeURIComponent(`Cost del trajecte ${curOrig} → ${curDest}: ${getURL()}`),'_blank');}
+
+// ══ RECENTS ══════════════════════════════════════════
+async function saveRecent(orig,dest,km,mins){
+  const item={orig,dest,km:km.toFixed(1),time:fmtDur(mins),ts:Date.now()};
+  recents=recents.filter(r=>!(r.orig===orig&&r.dest===dest)).slice(0,4);
+  recents.unshift(item);await stSet(SK_REC,recents);renderRecents();
+}
+function renderRecents(){
+  const sec=document.getElementById('recentSec'),list=document.getElementById('recentList');
+  if(!recents.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  list.innerHTML=recents.map((r,i)=>`<div class="recent-item" onclick="loadRecent(${i})"><div class="ri-route"><div class="ri-names">📍 ${r.orig} → 🏁 ${r.dest}</div><div class="ri-meta">${r.km} km · ${r.time}</div></div><span class="ri-arr">→</span><button class="ri-del" onclick="delRecent(event,${i})">✕</button></div>`).join('');
+}
+function loadRecent(i){const r=recents[i];document.getElementById('inOrig').value=r.orig;document.getElementById('inDest').value=r.dest;calcRoute();}
+async function delRecent(e,i){e.stopPropagation();recents.splice(i,1);await stSet(SK_REC,recents);renderRecents();}
+
+// ══ UI HELPERS ═══════════════════════════════════════
+function clearInput(id){document.getElementById(id).value='';document.getElementById(id).focus();}
+function swapInputs(){const o=document.getElementById('inOrig'),d=document.getElementById('inDest');[o.value,d.value]=[d.value,o.value];}
+function setRT(val,btn){isRT=val;document.querySelectorAll('#rtSec .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');if(routeBase!=null)document.getElementById('km').value=(isRT?routeBase*2:routeBase).toFixed(1);}
+function selPax(n,btn){pax=n;document.querySelectorAll('#paxBtns .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+function setSt(t,h){const el=document.getElementById('stMsg');el.className='stmsg '+t;el.textContent=h;}
+function fmtDur(m){if(!m||m<=0)return '—';if(m<60)return m+' min';const h=Math.floor(m/60);return h+'h'+(m%60?' '+(m%60)+'min':'');}
+document.getElementById('inDest').addEventListener('keydown',e=>{if(e.key==='Enter')calcRoute();});
+
+// ══ COST ═════════════════════════════════════════════
+function fmt(n){return n.toFixed(2).replace('.',',')+' €';}
+function fN(n,d=2){return n.toFixed(d).replace('.',',');}
+function calcular(){
+  const km=parseFloat(document.getElementById('km').value)||0;
+  const preu=parseFloat(document.getElementById('preu').value)||0;
+  const peatges=parseFloat(document.getElementById('peatges').value)||0;
+  if(!km){setSt('err','Introdueix la distància o calcula la ruta primer.');return;}
+  const v=activeVeh();
+  const litres=km*v.consum/100,cComb=litres*preu,cDesg=km*v.desgast;
+  const total=cComb+cDesg+peatges,perPax=total/pax;
+  const rtLbl=isRT?' (A/T)':'';
+  document.getElementById('bigNums').innerHTML=`<div class="bi"><span class="bi-lbl">Cost total${rtLbl}</span><span class="bi-num">${fN(total)} €</span></div><div class="bi"><span class="bi-lbl">Per persona (÷${pax})</span><span class="bi-num g">${fN(perPax)} €</span></div>`;
+  let rows=`<div class="rrow"><span class="rlbl">Vehicle</span><span class="rval">${v.name}</span></div><div class="rrow"><span class="rlbl">Distància per carretera${rtLbl}</span><span class="rval">${fN(km,1)} km</span></div><div class="rrow"><span class="rlbl">Combustible (${fN(litres,2)} L · ${fN(preu)} €/L)</span><span class="rval">${fmt(cComb)}</span></div>`;
+  if(peatges>0)rows+=`<div class="rrow"><span class="rlbl">Peatges i extras</span><span class="rval">${fmt(peatges)}</span></div>`;
+  rows+=`<div class="rrow"><span class="rlbl" style="color:var(--text)">Total</span><span class="rval a">${fmt(total)}</span></div>`;
+  if(pax>1)rows+=`<div class="rrow"><span class="rlbl">Cada persona paga</span><span class="rval g">${fmt(perPax)}</span></div>`;
+  document.getElementById('desgl').innerHTML=rows;
+  const res=document.getElementById('results');res.style.display='block';res.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ══ ADMIN ════════════════════════════════════════════
+function closeOv(id){document.getElementById(id).classList.remove('open');}
+['ovPass','ovAdmin'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)closeOv(id);});});
+function openAdmin(){
+  if(!cfg.passHash){document.getElementById('blkSetup').style.display='block';document.getElementById('blkLogin').style.display='none';document.getElementById('passTitle').textContent='Crear contrasenya';document.getElementById('fbSetup').className='fbk';document.getElementById('pS1').value='';document.getElementById('pS2').value='';}
+  else{document.getElementById('blkSetup').style.display='none';document.getElementById('blkLogin').style.display='block';document.getElementById('passTitle').textContent='Accés Admin';document.getElementById('fbLogin').className='fbk';document.getElementById('pL').value='';setTimeout(()=>document.getElementById('pL').focus(),80);}
+  document.getElementById('ovPass').classList.add('open');
+}
+async function doSetup(){const p1=document.getElementById('pS1').value,p2=document.getElementById('pS2').value,fb=document.getElementById('fbSetup');if(p1.length<4){fb.className='fbk err';fb.textContent='Mínim 4 caràcters.';return;}if(p1!==p2){fb.className='fbk err';fb.textContent='No coincideixen.';return;}cfg.passHash=await sha256(p1);await stSet(SK,cfg);fb.className='fbk ok';fb.textContent='Contrasenya creada!';setTimeout(()=>{closeOv('ovPass');launchAdmin();},600);}
+async function doLogin(){const p=document.getElementById('pL').value,fb=document.getElementById('fbLogin');if(await sha256(p)!==cfg.passHash){fb.className='fbk err';fb.textContent='Contrasenya incorrecta.';return;}closeOv('ovPass');launchAdmin();}
+document.getElementById('pL').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function launchAdmin(){renderVlist();document.getElementById('cfgPreu').value=cfg.preuDef;document.getElementById('fbPas').className='fbk';showTab('pVeh',document.querySelector('.tab'));document.getElementById('ovAdmin').classList.add('open');}
+function showTab(id,btn){document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');document.querySelectorAll('.tab').forEach(b=>{if(b.getAttribute('onclick')?.includes(id))b.classList.add('on');});}
+let editVehId=null;
+function renderVlist(){document.getElementById('vlist').innerHTML=cfg.vehicles.map(v=>`<div class="vcard${v.active?' act':''}"><div class="vdot"></div><div class="vinfo"><div class="vname">${v.name}${v.active?' ✓':''}</div><div class="vstats">${v.consum.toFixed(1)} L/100 · ${v.desgast.toFixed(3)} €/km</div></div><div class="vacts">${!v.active?`<button class="vbtn sel" onclick="selectVeh('${v.id}')">Activar</button>`:''}<button class="vbtn edt" onclick="editVeh('${v.id}')">✎</button>${cfg.vehicles.length>1?`<button class="vbtn del" onclick="delVeh('${v.id}')">✕</button>`:''}</div></div>`).join('');}
+async function selectVeh(id){cfg.vehicles.forEach(v=>v.active=v.id===id);await stSet(SK,cfg);renderVlist();updateRef();}
+function editVeh(id){const v=cfg.vehicles.find(x=>x.id===id);if(!v)return;editVehId=id;document.getElementById('vNom').value=v.name;document.getElementById('vCons').value=v.consum;document.getElementById('vDesg').value=v.desgast;document.getElementById('vFormTit').textContent='✎ Editar';document.getElementById('bCancelVeh').style.display='inline-block';}
+function cancelEditVeh(){editVehId=null;['vNom','vCons','vDesg'].forEach(id=>document.getElementById(id).value='');document.getElementById('vFormTit').textContent='+ Nou vehicle';document.getElementById('bCancelVeh').style.display='none';}
+async function saveVeh(){const name=document.getElementById('vNom').value.trim(),consum=parseFloat(document.getElementById('vCons').value),desgast=parseFloat(document.getElementById('vDesg').value),fb=document.getElementById('fbVeh');if(!name||isNaN(consum)||isNaN(desgast)||consum<=0||desgast<=0){fb.className='fbk err';fb.textContent='Omple tots els camps.';return;}if(editVehId){const v=cfg.vehicles.find(x=>x.id===editVehId);if(v){v.name=name;v.consum=consum;v.desgast=desgast;}fb.className='fbk ok';fb.textContent='Actualitzat.';cancelEditVeh();}else{cfg.vehicles.push({id:'v'+Date.now(),name,consum,desgast,active:false});fb.className='fbk ok';fb.textContent='Vehicle afegit.';['vNom','vCons','vDesg'].forEach(id=>document.getElementById(id).value='');}await stSet(SK,cfg);renderVlist();updateRef();setTimeout(()=>fb.className='fbk',2200);}
+async function delVeh(id){if(cfg.vehicles.length<=1)return;cfg.vehicles=cfg.vehicles.filter(v=>v.id!==id);if(!cfg.vehicles.some(v=>v.active))cfg.vehicles[0].active=true;await stSet(SK,cfg);renderVlist();updateRef();}
+async function saveCfgUI(){const p=parseFloat(document.getElementById('cfgPreu').value),fb=document.getElementById('fbCfg');if(isNaN(p)||p<=0){fb.className='fbk err';fb.textContent='Preu no vàlid.';return;}cfg.preuDef=p;await stSet(SK,cfg);document.getElementById('preu').value=p;fb.className='fbk ok';fb.textContent='Guardat.';setTimeout(()=>fb.className='fbk',2000);}
+async function changePass(){const old=document.getElementById('pOld').value,n1=document.getElementById('pN1').value,n2=document.getElementById('pN2').value,fb=document.getElementById('fbPas');if(await sha256(old)!==cfg.passHash){fb.className='fbk err';fb.textContent='Contrasenya actual incorrecta.';return;}if(n1.length<4){fb.className='fbk err';fb.textContent='Mínim 4 caràcters.';return;}if(n1!==n2){fb.className='fbk err';fb.textContent='No coincideixen.';return;}cfg.passHash=await sha256(n1);await stSet(SK,cfg);fb.className='fbk ok';fb.textContent='Contrasenya canviada.';['pOld','pN1','pN2'].forEach(id=>document.getElementById(id).value='');setTimeout(()=>fb.className='fbk',3000);}
+async function resetAll(){if(!confirm('Segur? S\'eliminaran la contrasenya i els vehicles personalitzats.'))return;cfg=JSON.parse(JSON.stringify(DEF));await stSet(SK,cfg);closeOv('ovAdmin');document.getElementById('preu').value=cfg.preuDef;updateRef();}
+
+init();
+</script>
+</body>
+</html>
