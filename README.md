@@ -29,7 +29,7 @@ Facilitar la planificació dels desplaçaments mitjançant una ferramenta pràct
 
 ## 🌐 Accedeix a la calculadora
 
-### 👉 [OBRI LA CALCULADORA DE TRAJECTES](ENLLAÇ_DE_LA_TEUA_APLICACIÓ)
+### 👉 [OBRI LA CALCULADORA DE TRAJECTES](https://serferc1.github.io/calculadoratrajectes.github.io/)
 
 ---
 
